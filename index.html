@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySync Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .modal-overlay { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+            <div>
+                <h1 class="text-3xl font-bold text-indigo-600 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    StudySync
+                </h1>
+                <p class="text-slate-500 font-medium">Streamlined Task Management</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button id="enable-notifications" class="hidden flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200 px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                    Enable Desktop Alerts
+                </button>
+                <button onclick="toggleModal(true)" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center gap-2 shadow-xl shadow-indigo-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Assignment
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- SIDEBAR -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- URGENCY SECTION -->
+                <section class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-lg font-bold flex items-center gap-2 text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            Urgent Tasks
+                        </h2>
+                        <span id="urgent-count" class="bg-red-100 text-red-600 text-xs font-black px-2.5 py-1 rounded-full">0</span>
+                    </div>
+                    <div id="urgent-list" class="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar"></div>
+                </section>
+
+                <!-- ANALYTICS -->
+                <section class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                    <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-5">Current Stats</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                            <p id="stat-pending" class="text-3xl font-black text-slate-800">0</p>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Pending</p>
+                        </div>
+                        <div class="p-4 bg-green-50 rounded-2xl border border-green-100 text-center">
+                            <p id="stat-completed" class="text-3xl font-black text-green-600">0</p>
+                            <p class="text-[10px] text-green-600/70 font-bold uppercase tracking-tight">Completed</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- REMINDER INFO -->
+                <section class="bg-indigo-600 text-white rounded-3xl p-6 shadow-xl shadow-indigo-100">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="p-2 bg-white/20 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        </div>
+                        <h2 class="text-lg font-bold">Smart Alerts</h2>
+                    </div>
+                    <p class="text-indigo-100 text-sm leading-relaxed">Notifications trigger 60 minutes before deadlines. Urgent tasks are automatically highlighted in the side panel.</p>
+                </section>
+            </div>
+
+            <!-- MAIN INVENTORY -->
+            <div class="lg:col-span-8">
+                <section class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Assignment Inventory</h2>
+                        <div class="flex bg-slate-200/50 p-1 rounded-xl">
+                            <button onclick="setFilter('all')" id="btn-all" class="px-5 py-1.5 bg-white text-indigo-600 shadow-sm rounded-lg text-xs font-black transition">All Tasks</button>
+                            <button onclick="setFilter('active')" id="btn-active" class="px-5 py-1.5 text-slate-500 rounded-lg text-xs font-black transition">Active</button>
+                        </div>
+                    </div>
+                    
+                    <div id="task-list" class="space-y-4"></div>
+
+                    <div id="empty-state" class="hidden text-center py-24 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
+                        <div class="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-10 h-10 text-slate-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-600">Inventory is empty</h3>
+                        <p class="text-slate-400 max-w-xs mx-auto mt-2">Add your first assignment to start tracking deadlines effectively.</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center">
+                <h2 class="text-2xl font-black text-slate-800">New Task</h2>
+                <button onclick="toggleModal(false)" class="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <form id="task-form" class="p-8 space-y-5">
+                <div>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Task Title</label>
+                    <input type="text" id="task-title" required placeholder="Homework, Exam, Project..." class="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Description</label>
+                    <textarea id="task-desc" rows="2" placeholder="What needs to be done?" class="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Due Date</label>
+                        <input type="datetime-local" id="task-date" required class="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Priority</label>
+                        <select id="task-priority" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="submit" class="flex-1 py-4 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-lg shadow-indigo-100">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /** BACKEND SIMULATION **/
+        const Backend = {
+            getDB: () => JSON.parse(localStorage.getItem('sync_db')) || [],
+            saveDB: (data) => localStorage.setItem('sync_db', JSON.stringify(data)),
+            getTasks: async () => Backend.getDB(),
+            createTask: async (task) => {
+                const db = Backend.getDB();
+                const newTask = { ...task, id: Date.now().toString(), completed: false, notified: false };
+                db.push(newTask);
+                Backend.saveDB(db);
+                return newTask;
+            },
+            updateTask: async (id, updates) => {
+                let db = Backend.getDB();
+                db = db.map(t => t.id === id ? { ...t, ...updates } : t);
+                Backend.saveDB(db);
+                return true;
+            },
+            deleteTask: async (id) => {
+                let db = Backend.getDB();
+                db = db.filter(t => t.id !== id);
+                Backend.saveDB(db);
+                return true;
+            }
+        };
+
+        /** FRONTEND APP **/
+        let currentFilter = 'all';
+
+        async function init() {
+            render();
+            setupNotifications();
+            setInterval(render, 15000);
+        }
+
+        async function render() {
+            const tasks = await Backend.getTasks();
+            const list = document.getElementById('task-list');
+            const urgentList = document.getElementById('urgent-list');
+            const empty = document.getElementById('empty-state');
+            const now = new Date();
+
+            document.getElementById('stat-pending').textContent = tasks.filter(t => !t.completed).length;
+            document.getElementById('stat-completed').textContent = tasks.filter(t => t.completed).length;
+
+            const urgentTasks = tasks.filter(t => {
+                const diff = new Date(t.deadline) - now;
+                return !t.completed && diff > 0 && diff < 86400000;
+            });
+            document.getElementById('urgent-count').textContent = urgentTasks.length;
+            
+            urgentList.innerHTML = urgentTasks.length === 0 
+                ? '<p class="text-[11px] text-slate-400 italic">No critical deadlines for the next 24h.</p>'
+                : urgentTasks.map(t => `
+                    <div class="p-3 bg-red-50 border border-red-100 rounded-xl animate-pulse-slow">
+                        <p class="text-xs font-black text-red-700 truncate">${t.title}</p>
+                        <p class="text-[10px] text-red-500 font-bold uppercase tracking-wider">${getTimeRemaining(t.deadline)} left</p>
+                    </div>
+                `).join('');
+
+            let displayTasks = (currentFilter === 'active') ? tasks.filter(t => !t.completed) : tasks;
+            displayTasks.sort((a, b) => a.completed - b.completed || new Date(a.deadline) - new Date(b.deadline));
+
+            if (displayTasks.length === 0) {
+                list.innerHTML = '';
+                empty.classList.toggle('hidden', tasks.length > 0);
+                return;
+            }
+            empty.classList.add('hidden');
+
+            list.innerHTML = displayTasks.map(task => {
+                const diff = new Date(task.deadline) - now;
+                const isExpired = diff < 0;
+                const isUrgent = diff > 0 && diff < 3600000;
+                const pColor = { high: 'red', medium: 'amber', low: 'green' }[task.priority];
+                
+                if (isUrgent && !task.notified && !task.completed) triggerReminder(task);
+
+                return `
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border-l-8 border-${pColor}-500 transition-all hover:shadow-md ${task.completed ? 'opacity-40 grayscale' : ''}">
+                        <div class="flex items-start justify-between gap-6">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-${pColor}-200 bg-${pColor}-50 text-${pColor}-700">${task.priority}</span>
+                                    <h3 class="text-lg font-black text-slate-800 ${task.completed ? 'line-through' : ''}">${task.title}</h3>
+                                </div>
+                                <p class="text-slate-500 text-sm mb-4 leading-relaxed">${task.description || 'No additional details provided.'}</p>
+                                <div class="flex flex-wrap gap-3 text-[11px] font-black uppercase tracking-wider">
+                                    <span class="flex items-center gap-1.5 bg-slate-100 text-slate-500 px-3 py-1.5 rounded-xl">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                        ${new Date(task.deadline).toLocaleDateString()}
+                                    </span>
+                                    <span class="flex items-center gap-1.5 ${isExpired ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'} px-3 py-1.5 rounded-xl">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                        ${isExpired ? 'EXPIRED' : getTimeRemaining(task.deadline)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="handleToggle('${task.id}', ${!task.completed})" class="p-3 rounded-2xl ${task.completed ? 'text-green-600 bg-green-50' : 'text-slate-400 bg-slate-50 hover:bg-slate-100'} transition transform active:scale-95">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14 9 11"/></svg>
+                                </button>
+                                <button onclick="handleDelete('${task.id}')" class="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition transform active:scale-95">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getTimeRemaining(deadline) {
+            const total = Date.parse(deadline) - Date.parse(new Date());
+            if (total <= 0) return "Due";
+            const mins = Math.floor((total / 1000 / 60) % 60);
+            const hrs = Math.floor((total / (1000 * 60 * 60)) % 24);
+            const days = Math.floor(total / (1000 * 60 * 60 * 24));
+            return days > 0 ? `${days}d ${hrs}h` : `${hrs}h ${mins}m`;
+        }
+
+        function toggleModal(show) {
+            document.getElementById('modal').classList.toggle('hidden', !show);
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.getElementById('btn-all').className = filter === 'all' 
+                ? 'px-5 py-1.5 bg-white text-indigo-600 shadow-sm rounded-lg text-xs font-black transition' 
+                : 'px-5 py-1.5 text-slate-500 rounded-lg text-xs font-black transition';
+            document.getElementById('btn-active').className = filter === 'active' 
+                ? 'px-5 py-1.5 bg-white text-indigo-600 shadow-sm rounded-lg text-xs font-black transition' 
+                : 'px-5 py-1.5 text-slate-500 rounded-lg text-xs font-black transition';
+            render();
+        }
+
+        async function handleToggle(id, status) {
+            await Backend.updateTask(id, { completed: status });
+            render();
+        }
+
+        async function handleDelete(id) {
+            await Backend.deleteTask(id);
+            render();
+        }
+
+        async function triggerReminder(task) {
+            if (Notification.permission === "granted") {
+                new Notification("StudySync Alert!", {
+                    body: `"${task.title}" is due soon!`,
+                    icon: "https://cdn-icons-png.flaticon.com/512/2907/2907253.png"
+                });
+                await Backend.updateTask(task.id, { notified: true });
+            }
+        }
+
+        function setupNotifications() {
+            const btn = document.getElementById('enable-notifications');
+            if ("Notification" in window && Notification.permission !== "granted") {
+                btn.classList.remove('hidden');
+                btn.onclick = () => {
+                    Notification.requestPermission().then(p => {
+                        if (p === "granted") btn.classList.add('hidden');
+                    });
+                };
+            }
+        }
+
+        document.getElementById('task-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const task = {
+                title: document.getElementById('task-title').value,
+                description: document.getElementById('task-desc').value,
+                deadline: document.getElementById('task-date').value,
+                priority: document.getElementById('task-priority').value
+            };
+            await Backend.createTask(task);
+            toggleModal(false);
+            e.target.reset();
+            render();
+        };
+
+        init();
+    </script>
+</body>
+</html>
